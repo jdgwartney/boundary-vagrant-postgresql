@@ -7,49 +7,38 @@ exec { "yum update -y":
 package { 'postgresql-server.x86_64': ensure  => 'latest' }
 package { 'wget': ensure  => 'latest' }
 package { 'curl': ensure  => 'latest' }
-#package { 'nodejs': ensure  => 'latest', require => Exec[install-ppa] }
-#package { 'npm': ensure  => 'latest', require => Exec[install-ppa] }
 
-# Start the RabbitMQ service
-#service { "rabbitmq-server":
-#  ensure  => "running",
-#  before => Exec[enable-management-plugin],
-#  require => Package[rabbitmq-server],
-#}
-
-# Prequiste for the latest Nodejs
-#exec { "enable-management-plugin":
-#  command => "/usr/bin/sudo /usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management",
-#  path => "/vagrant",
-#  require => Package[rabbitmq-server]
-#}
+# Get PIP install script
+exec { "get-pip":
+  command => "/usr/bin/curl -k https://bootstrap.pypa.io/get-pip.py --output /home/vagrant/get-pip.py",
+  path => "/vagrant",
+}
 
 # Install Pip library for python modules
 exec { "install-pip":
   command => "/usr/bin/python /vagrant/get-pip.py",
   path => "/vagrant",
+  require => Exec["get-pip"]
 }
 
-# Install boto library for AWS ELB Plugin
-#exec { "install-":
-#  command => "/usr/local/bin/pip install boto boto==2.32.1",
-#  path => "/vagrant",
-#  require => Package[rabbitmq-server]
-#}
+exec { "get-meter-install":
+  command => "/usr/bin/curl -k https://raw.githubusercontent.com/boundary/boundary_scripts/master/setup_meter.sh -o /home/vagrant/setup_meter.sh",
+  path => "/vagrant",
+  require => Package[curl]
+}
 
-# Install the Rabbit MQ Client library so that we
-# generate traffice in Rabbit MQ
-#exec { "install-rabbitmq-java-client":
-#  command => "install-rabbitmq-client.sh",
-#  path => "/vagrant",
-#}
+file { "setup":
+  path => "/home/vagrant/setup_meter.sh",
+  ensure => 'present',
+  owner => "vagrant",
+  group => "vagrant",
+  mode   => 755,
+  require => Exec["get-meter-install"]
+}
 
-# Prequiste for the latest Nodejs
-#exec { "install-ppa":
-#  command => "/usr/bin/curl -sL https://deb.nodesource.com/setup | /usr/bin/sudo bash -",
-#  path => "/vagrant",
-#  require => Package[curl]
-#}
+#
+# Relay
+#
 
 # Install the relay
 #exec { "install-relay":
@@ -75,11 +64,11 @@ exec { "install-pip":
 #    mode   => 755,
 #}
 
-#file { 'profile':
-#path => '/home/vagrant/.bash_profile',
-#mode => 0400,
-#owner => vagrant,
-#group => vagrant,
-#source => '/vagrant/bash_profile',
-#require => Package[rabbitmq-server]
-#}
+file { 'profile':
+path => '/home/vagrant/.bash_profile',
+mode => 0400,
+owner => vagrant,
+group => vagrant,
+source => '/vagrant/bash_profile',
+require => Package[rabbitmq-server]
+}
